@@ -1,7 +1,7 @@
-/// <reference path="babylon.module.d.ts" />
-/// <reference path="babylonjs.loaders.module.d.ts" />
-/// <reference path="babylonjs.materials.module.d.ts" />
-/// <reference path="babylon.gui.module.d.ts" />
+/// <reference path="../node_modules/babylonjs/babylon.module.d.ts" />
+/// <reference path="../node_modules/babylonjs-loaders/babylonjs.loaders.module.d.ts" />
+/// <reference path="../node_modules/babylonjs-materials/babylonjs.materials.module.d.ts" />
+/// <reference path="../node_modules/babylonjs-gui/babylon.gui.module.d.ts" />
 
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);

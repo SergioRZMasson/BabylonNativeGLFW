@@ -1,7 +1,5 @@
-#include <Windows.h>
-#include <Windowsx.h>
-#include <Shlwapi.h>
 #include <filesystem>
+#include <iostream>
 #include <stdio.h>
 
 #include <Babylon/AppRuntime.h>
@@ -15,9 +13,23 @@
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <Babylon/Polyfills/Canvas.h>
 
-#define GLFW_EXPOSE_NATIVE_WIN32
-#define GLFW_NATIVE_INCLUDE_NONE
+#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+
+#if GLFW_VERSION_MINOR < 2
+#	error "GLFW 3.2 or later is required"
+#endif // GLFW_VERSION_MINOR < 2
+
+#if GAME_PLATFORM_LINUX || GAME_PLATFORM_BSD
+#	define GLFW_EXPOSE_NATIVE_X11
+#	define GLFW_EXPOSE_NATIVE_GLX
+#elif GAME_PLATFORM_OSX
+#	define GLFW_EXPOSE_NATIVE_COCOA
+#	define GLFW_EXPOSE_NATIVE_NSGL
+#elif GAME_PLATFORM_WINDOWS
+#	define GLFW_EXPOSE_NATIVE_WIN32
+#	define GLFW_EXPOSE_NATIVE_WGL
+#endif //
 #include <GLFW/glfw3native.h>
 
 std::unique_ptr<Babylon::AppRuntime> runtime{};
@@ -29,6 +41,32 @@ bool minimized = false;
 
 #define INITIAL_WIDTH 1920
 #define INITIAL_HEIGHT 1080
+
+static void* glfwNativeWindowHandle(GLFWwindow* _window)
+	{
+#	if GAME_PLATFORM_LINUX || GAME_PLATFORM_BSD
+# 		if ENTRY_CONFIG_USE_WAYLAND
+		wl_egl_window *win_impl = (wl_egl_window*)glfwGetWindowUserPointer(_window);
+		if(!win_impl)
+		{
+			int width, height;
+			glfwGetWindowSize(_window, &width, &height);
+			struct wl_surface* surface = (struct wl_surface*)glfwGetWaylandWindow(_window);
+			if(!surface)
+				return nullptr;
+			win_impl = wl_egl_window_create(surface, width, height);
+			glfwSetWindowUserPointer(_window, (void*)(uintptr_t)win_impl);
+		}
+		return (void*)(uintptr_t)win_impl;
+#		else
+		return (void*)(uintptr_t)glfwGetX11Window(_window);
+#		endif
+#	elif GAME_PLATFORM_OSX
+		return glfwGetCocoaWindow(_window);
+#	elif GAME_PLATFORM_WINDOWS
+		return glfwGetWin32Window(_window);
+#	endif // GAME_PLATFORM_
+	}
 
 void Uninitialize()
 {
@@ -53,7 +91,7 @@ void RefreshBabylon(GLFWwindow* window)
 	glfwGetWindowSize(window, &width, &height);
 
 	Babylon::Graphics::WindowConfiguration graphicsConfig{};
-	graphicsConfig.Window = glfwGetWin32Window(window);
+	graphicsConfig.Window = (Babylon::Graphics::WindowType)glfwNativeWindowHandle(window);
 	graphicsConfig.Width = width;
 	graphicsConfig.Height = height;
 	graphicsConfig.MSAASamples = 4;
@@ -70,8 +108,8 @@ void RefreshBabylon(GLFWwindow* window)
 			device->AddToJavaScript(env);
 
 			Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
-				OutputDebugStringA(message);
-				});
+				std::cout << message << std::endl;
+			});
 
 			Babylon::Polyfills::Window::Initialize(env);
 

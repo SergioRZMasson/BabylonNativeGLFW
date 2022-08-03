@@ -56,3 +56,11 @@ else()
 endif()
 
 set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT BabylonNativeExample)
+
+if(MSVC)
+    target_compile_definitions(BabylonNativeExample PRIVATE GAME_PLATFORM_WINDOWS)
+elseif(APPLE)
+    target_compile_definitions(BabylonNativeExample PRIVATE GAME_PLATFORM_OSX)
+else()
+    target_compile_definitions(BabylonNativeExample PRIVATE GAME_PLATFORM_LINUX)
+endif()
