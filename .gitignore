@@ -11,3 +11,4 @@ CTestTestfile.cmake
 _deps
 node_modules
 [bB]uild
+.vscode

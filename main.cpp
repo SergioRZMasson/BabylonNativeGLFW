@@ -20,13 +20,13 @@
 #	error "GLFW 3.2 or later is required"
 #endif // GLFW_VERSION_MINOR < 2
 
-#if GAME_PLATFORM_LINUX || GAME_PLATFORM_BSD
+#if TARGET_PLATFORM_LINUX
 #	define GLFW_EXPOSE_NATIVE_X11
 #	define GLFW_EXPOSE_NATIVE_GLX
-#elif GAME_PLATFORM_OSX
+#elif TARGET_PLATFORM_OSX
 #	define GLFW_EXPOSE_NATIVE_COCOA
 #	define GLFW_EXPOSE_NATIVE_NSGL
-#elif GAME_PLATFORM_WINDOWS
+#elif TARGET_PLATFORM_WINDOWS
 #	define GLFW_EXPOSE_NATIVE_WIN32
 #	define GLFW_EXPOSE_NATIVE_WGL
 #endif //
@@ -43,30 +43,15 @@ bool minimized = false;
 #define INITIAL_HEIGHT 1080
 
 static void* glfwNativeWindowHandle(GLFWwindow* _window)
-	{
-#	if GAME_PLATFORM_LINUX || GAME_PLATFORM_BSD
-# 		if ENTRY_CONFIG_USE_WAYLAND
-		wl_egl_window *win_impl = (wl_egl_window*)glfwGetWindowUserPointer(_window);
-		if(!win_impl)
-		{
-			int width, height;
-			glfwGetWindowSize(_window, &width, &height);
-			struct wl_surface* surface = (struct wl_surface*)glfwGetWaylandWindow(_window);
-			if(!surface)
-				return nullptr;
-			win_impl = wl_egl_window_create(surface, width, height);
-			glfwSetWindowUserPointer(_window, (void*)(uintptr_t)win_impl);
-		}
-		return (void*)(uintptr_t)win_impl;
-#		else
+{
+#if TARGET_PLATFORM_LINUX
 		return (void*)(uintptr_t)glfwGetX11Window(_window);
-#		endif
-#	elif GAME_PLATFORM_OSX
+#elif TARGET_PLATFORM_OSX
 		return ((NSWindow*)glfwGetCocoaWindow(_window)).contentView;
-#	elif GAME_PLATFORM_WINDOWS
+#elif TARGET_PLATFORM_WINDOWS
 		return glfwGetWin32Window(_window);
-#	endif // GAME_PLATFORM_
-	}
+#endif // TARGET_PLATFORM_
+}
 
 void Uninitialize()
 {
