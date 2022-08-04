@@ -62,7 +62,7 @@ static void* glfwNativeWindowHandle(GLFWwindow* _window)
 		return (void*)(uintptr_t)glfwGetX11Window(_window);
 #		endif
 #	elif GAME_PLATFORM_OSX
-		return glfwGetCocoaWindow(_window);
+		return ((NSWindow*)glfwGetCocoaWindow(_window)).contentView;
 #	elif GAME_PLATFORM_WINDOWS
 		return glfwGetWin32Window(_window);
 #	endif // GAME_PLATFORM_
