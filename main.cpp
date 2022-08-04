@@ -158,7 +158,7 @@ static void cursor_position_callback(GLFWwindow* window, double xpos, double ypo
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-	nativeInput->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, -yoffset * 100.0);
+	nativeInput->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, static_cast<int>(-yoffset * 100.0));
 }
 
 static void window_resize_callback(GLFWwindow* window, int width, int height)
