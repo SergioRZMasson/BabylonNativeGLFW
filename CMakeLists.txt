@@ -16,6 +16,7 @@ target_link_libraries(BabylonNativeExample
     PRIVATE XMLHttpRequest
     PRIVATE Canvas
     PRIVATE glfw
+    PRIVATE imgui
     ${ADDITIONAL_LIBRARIES}
     ${BABYLON_NATIVE_PLAYGROUND_EXTENSION_LIBRARIES})
 

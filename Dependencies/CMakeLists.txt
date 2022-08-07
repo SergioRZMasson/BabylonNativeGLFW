@@ -74,3 +74,6 @@ endif()
 if(BABYLON_NATIVE_POLYFILL_CANVAS)
     set_property(TARGET Canvas PROPERTY FOLDER Dependencies/BabylonNative/Polyfills/)
 endif()
+
+add_subdirectory(imgui)
+set_property(TARGET imgui PROPERTY FOLDER Dependencies/)
