@@ -45,10 +45,7 @@ target_include_directories(imgui
 
 target_link_libraries(imgui
     PUBLIC glfw
-    PRIVATE napi_extensions
-    PUBLIC JsRuntime
-    PRIVATE GraphicsDevice
-    PRIVATE GraphicsDeviceContext
+    PUBLIC GraphicsDeviceContext
     PRIVATE bgfx
     PRIVATE bx)
 

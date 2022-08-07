@@ -14,9 +14,10 @@
 
 #pragma once
 #include "imgui.h"      // IMGUI_IMPL_API
-#include <Babylon/JsRuntime.h>
+#include <Babylon/Graphics/DeviceContext.h>
 
-IMGUI_IMPL_API bool ImGui_ImplBabylon_Init(Napi::Env env);
+IMGUI_IMPL_API bool ImGui_ImplBabylon_Init();
+IMGUI_IMPL_API void ImGui_ImplBabylon_SetContext(Babylon::Graphics::DeviceContext* context);
 IMGUI_IMPL_API void ImGui_ImplBabylon_Shutdown();
 IMGUI_IMPL_API void ImGui_ImplBabylon_NewFrame();
 IMGUI_IMPL_API void ImGui_ImplBabylon_RenderDrawData(ImDrawData* draw_data);

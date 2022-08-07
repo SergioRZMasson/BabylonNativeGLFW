@@ -5,10 +5,7 @@
 #include <bx/math.h>
 #include <bx/allocator.h>
 
-#include <Babylon/Graphics/Platform.h>
-#include <Babylon/Graphics/Device.h>
 #include <Babylon/Graphics/DeviceContext.h>
-#include <Babylon/JsRuntime.h>
 
 #define IMGUI_FONT_REGULAR 0
 #define IMGUI_FONT_MONO 1
@@ -69,11 +66,10 @@ inline bool checkAvailTransientBuffers(uint32_t _numVertices, const bgfx::Vertex
 }
 
 static bx::DefaultAllocator allocator;
-static Babylon::Graphics::DeviceContext *context;
+static Babylon::Graphics::DeviceContext *s_context = nullptr;
 
-bool ImGui_ImplBabylon_Init(Napi::Env env)
+bool ImGui_ImplBabylon_Init()
 {
-    context = &Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
     float _fontSize = 16;
 
     bx::AllocatorI *_allocator = &allocator;
@@ -137,14 +133,22 @@ bool ImGui_ImplBabylon_Init(Napi::Env env)
     return true;
 }
 
+void ImGui_ImplBabylon_SetContext(Babylon::Graphics::DeviceContext *context)
+{
+    s_context = context;
+}
+
 IMGUI_IMPL_API void ImGui_ImplBabylon_NewFrame()
 {
 }
 
 IMGUI_IMPL_API void ImGui_ImplBabylon_RenderDrawData(ImDrawData *_drawData)
 {
-    arcana::make_task(context->AfterRenderScheduler(), arcana::cancellation_source::none(),
-                      [_drawData]()
+    if (s_context == nullptr)
+        return;
+
+    arcana::make_task(s_context->AfterRenderScheduler(), arcana::cancellation_source::none(),
+                      [_drawData{_drawData}]()
                       {
                           // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
                           int fb_width = (int)(_drawData->DisplaySize.x * _drawData->FramebufferScale.x);
@@ -240,12 +244,11 @@ IMGUI_IMPL_API void ImGui_ImplBabylon_RenderDrawData(ImDrawData *_drawData)
                                           state |= BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA);
                                       }
 
-                                      // Project scissor/clipping rectangles into framebuffer space
                                       ImVec4 clipRect;
-                                      clipRect.x = (cmd->ClipRect.x - clipPos.x) * clipScale.x;
-                                      clipRect.y = (cmd->ClipRect.y - clipPos.y) * clipScale.y;
-                                      clipRect.z = (cmd->ClipRect.z - clipPos.x) * clipScale.x;
-                                      clipRect.w = (cmd->ClipRect.w - clipPos.y) * clipScale.y;
+                                      clipRect.x = cmd->ClipRect.x;
+                                      clipRect.y = cmd->ClipRect.y;
+                                      clipRect.z = cmd->ClipRect.z;
+                                      clipRect.w = cmd->ClipRect.w;
 
                                       if (clipRect.x < fb_width && clipRect.y < fb_height && clipRect.z >= 0.0f && clipRect.w >= 0.0f)
                                       {
