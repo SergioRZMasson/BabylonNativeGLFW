@@ -20,6 +20,10 @@
 #	error "GLFW 3.2 or later is required"
 #endif // GLFW_VERSION_MINOR < 2
 
+#include "imgui.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_babylon.h"
+
 #if TARGET_PLATFORM_LINUX
 #	define GLFW_EXPOSE_NATIVE_X11
 #	define GLFW_EXPOSE_NATIVE_GLX
@@ -91,6 +95,7 @@ void RefreshBabylon(GLFWwindow* window)
 	runtime->Dispatch([](Napi::Env env)
 		{
 			device->AddToJavaScript(env);
+			ImGui_ImplBabylon_Init(env);
 
 			Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
 				std::cout << message << std::endl;
@@ -185,6 +190,19 @@ int main()
 	glfwSetMouseButtonCallback(window, mouse_button_callback);
 	glfwSetScrollCallback(window, scroll_callback);
 
+	// Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+    ImGui::StyleColorsDark();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOther(window, true);
+	bool show_demo_window = true;
+    
 	RefreshBabylon(window);
 
 	while (!glfwWindowShouldClose(window))
@@ -197,6 +215,16 @@ int main()
 			update->Start();
 		}
 		glfwPollEvents();
+
+		// Start the Dear ImGui frame
+        ImGui_ImplBabylon_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+        ImGui::ShowDemoWindow(&show_demo_window);
+		ImGui::Render();
+		ImGui_ImplBabylon_RenderDrawData(ImGui::GetDrawData());
 	}
 
 	Uninitialize();

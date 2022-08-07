@@ -45,8 +45,10 @@ target_include_directories(imgui
 
 target_link_libraries(imgui
     PUBLIC glfw
-    PRIVATE AppRuntime
-    PRIVATE NativeEngine
+    PRIVATE napi_extensions
+    PUBLIC JsRuntime
+    PRIVATE GraphicsDevice
+    PRIVATE GraphicsDeviceContext
     PRIVATE bgfx
     PRIVATE bx)
 

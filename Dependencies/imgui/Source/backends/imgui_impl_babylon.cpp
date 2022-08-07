@@ -5,6 +5,11 @@
 #include <bx/math.h>
 #include <bx/allocator.h>
 
+#include <Babylon/Graphics/Platform.h>
+#include <Babylon/Graphics/Device.h>
+#include <Babylon/Graphics/DeviceContext.h>
+#include <Babylon/JsRuntime.h>
+
 #define IMGUI_FONT_REGULAR 0
 #define IMGUI_FONT_MONO 1
 #define IMGUI_FONT_COUNT 2
@@ -33,19 +38,18 @@ bgfx::ViewId m_viewId;
 #include "assets/icons_font_awesome.ttf.h"
 
 static const bgfx::EmbeddedShader s_embeddedShaders[] =
-{
-	BGFX_EMBEDDED_SHADER(vs_ocornut_imgui),
-	BGFX_EMBEDDED_SHADER(fs_ocornut_imgui),
-	BGFX_EMBEDDED_SHADER(vs_imgui_image),
-	BGFX_EMBEDDED_SHADER(fs_imgui_image),
-	BGFX_EMBEDDED_SHADER_END()
-};
+    {
+        BGFX_EMBEDDED_SHADER(vs_ocornut_imgui),
+        BGFX_EMBEDDED_SHADER(fs_ocornut_imgui),
+        BGFX_EMBEDDED_SHADER(vs_imgui_image),
+        BGFX_EMBEDDED_SHADER(fs_imgui_image),
+        BGFX_EMBEDDED_SHADER_END()};
 
 struct FontRangeMerge
 {
-	const void* data;
-	size_t      size;
-	ImWchar     ranges[3];
+    const void *data;
+    size_t size;
+    ImWchar ranges[3];
 };
 
 #define ICON_MIN_KI 0xe900
@@ -54,9 +58,9 @@ struct FontRangeMerge
 #define ICON_MAX_FA 0xf2e0
 
 static FontRangeMerge s_fontRangeMerge[] =
-{
-	{ s_iconsKenneyTtf,      sizeof(s_iconsKenneyTtf),      { ICON_MIN_KI, ICON_MAX_KI, 0 } },
-	{ s_iconsFontAwesomeTtf, sizeof(s_iconsFontAwesomeTtf), { ICON_MIN_FA, ICON_MAX_FA, 0 } },
+    {
+        {s_iconsKenneyTtf, sizeof(s_iconsKenneyTtf), {ICON_MIN_KI, ICON_MAX_KI, 0}},
+        {s_iconsFontAwesomeTtf, sizeof(s_iconsFontAwesomeTtf), {ICON_MIN_FA, ICON_MAX_FA, 0}},
 };
 
 inline bool checkAvailTransientBuffers(uint32_t _numVertices, const bgfx::VertexLayout &_layout, uint32_t _numIndices)
@@ -65,9 +69,11 @@ inline bool checkAvailTransientBuffers(uint32_t _numVertices, const bgfx::Vertex
 }
 
 static bx::DefaultAllocator allocator;
+static Babylon::Graphics::DeviceContext *context;
 
-bool ImGui_ImplBabylon_Init(Babylon::Graphics::Device *device)
+bool ImGui_ImplBabylon_Init(Napi::Env env)
 {
+    context = &Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
     float _fontSize = 16;
 
     bx::AllocatorI *_allocator = &allocator;
@@ -127,133 +133,138 @@ bool ImGui_ImplBabylon_Init(Babylon::Graphics::Device *device)
 
     m_texture = bgfx::createTexture2D(
         (uint16_t)width, (uint16_t)height, false, 1, bgfx::TextureFormat::BGRA8, 0, bgfx::copy(data, width * height * 4));
+
+    return true;
 }
 
 IMGUI_IMPL_API void ImGui_ImplBabylon_NewFrame()
 {
-
 }
 
 IMGUI_IMPL_API void ImGui_ImplBabylon_RenderDrawData(ImDrawData *_drawData)
 {
-    // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-    int fb_width = (int)(_drawData->DisplaySize.x * _drawData->FramebufferScale.x);
-    int fb_height = (int)(_drawData->DisplaySize.y * _drawData->FramebufferScale.y);
-    if (fb_width <= 0 || fb_height <= 0)
-        return;
+    arcana::make_task(context->AfterRenderScheduler(), arcana::cancellation_source::none(),
+                      [_drawData]()
+                      {
+                          // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
+                          int fb_width = (int)(_drawData->DisplaySize.x * _drawData->FramebufferScale.x);
+                          int fb_height = (int)(_drawData->DisplaySize.y * _drawData->FramebufferScale.y);
+                          if (fb_width <= 0 || fb_height <= 0)
+                              return;
 
-    bgfx::setViewName(m_viewId, "ImGui");
-    bgfx::setViewMode(m_viewId, bgfx::ViewMode::Sequential);
+                          bgfx::setViewName(m_viewId, "ImGui");
+                          bgfx::setViewMode(m_viewId, bgfx::ViewMode::Sequential);
 
-    const bgfx::Caps *caps = bgfx::getCaps();
-    {
-        float ortho[16];
-        float x = _drawData->DisplayPos.x;
-        float y = _drawData->DisplayPos.y;
-        float width = _drawData->DisplaySize.x;
-        float height = _drawData->DisplaySize.y;
+                          const bgfx::Caps *caps = bgfx::getCaps();
+                          {
+                              float ortho[16];
+                              float x = _drawData->DisplayPos.x;
+                              float y = _drawData->DisplayPos.y;
+                              float width = _drawData->DisplaySize.x;
+                              float height = _drawData->DisplaySize.y;
 
-        bx::mtxOrtho(ortho, x, x + width, y + height, y, 0.0f, 1000.0f, 0.0f, caps->homogeneousDepth);
-        bgfx::setViewTransform(m_viewId, NULL, ortho);
-        bgfx::setViewRect(m_viewId, 0, 0, uint16_t(width), uint16_t(height));
-    }
+                              bx::mtxOrtho(ortho, x, x + width, y + height, y, 0.0f, 1000.0f, 0.0f, caps->homogeneousDepth);
+                              bgfx::setViewTransform(m_viewId, NULL, ortho);
+                              bgfx::setViewRect(m_viewId, 0, 0, uint16_t(width), uint16_t(height));
+                          }
 
-    const ImVec2 clipPos = _drawData->DisplayPos;         // (0,0) unless using multi-viewports
-    const ImVec2 clipScale = _drawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+                          const ImVec2 clipPos = _drawData->DisplayPos;         // (0,0) unless using multi-viewports
+                          const ImVec2 clipScale = _drawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
-    // Render command lists
-    for (int32_t ii = 0, num = _drawData->CmdListsCount; ii < num; ++ii)
-    {
-        bgfx::TransientVertexBuffer tvb;
-        bgfx::TransientIndexBuffer tib;
+                          // Render command lists
+                          for (int32_t ii = 0, num = _drawData->CmdListsCount; ii < num; ++ii)
+                          {
+                              bgfx::TransientVertexBuffer tvb;
+                              bgfx::TransientIndexBuffer tib;
 
-        const ImDrawList *drawList = _drawData->CmdLists[ii];
-        uint32_t numVertices = (uint32_t)drawList->VtxBuffer.size();
-        uint32_t numIndices = (uint32_t)drawList->IdxBuffer.size();
+                              const ImDrawList *drawList = _drawData->CmdLists[ii];
+                              uint32_t numVertices = (uint32_t)drawList->VtxBuffer.size();
+                              uint32_t numIndices = (uint32_t)drawList->IdxBuffer.size();
 
-        if (!checkAvailTransientBuffers(numVertices, m_layout, numIndices))
-        {
-            // not enough space in transient buffer just quit drawing the rest...
-            break;
-        }
+                              if (!checkAvailTransientBuffers(numVertices, m_layout, numIndices))
+                              {
+                                  // not enough space in transient buffer just quit drawing the rest...
+                                  break;
+                              }
 
-        bgfx::allocTransientVertexBuffer(&tvb, numVertices, m_layout);
-        bgfx::allocTransientIndexBuffer(&tib, numIndices, sizeof(ImDrawIdx) == 4);
+                              bgfx::allocTransientVertexBuffer(&tvb, numVertices, m_layout);
+                              bgfx::allocTransientIndexBuffer(&tib, numIndices, sizeof(ImDrawIdx) == 4);
 
-        ImDrawVert *verts = (ImDrawVert *)tvb.data;
-        bx::memCopy(verts, drawList->VtxBuffer.begin(), numVertices * sizeof(ImDrawVert));
+                              ImDrawVert *verts = (ImDrawVert *)tvb.data;
+                              bx::memCopy(verts, drawList->VtxBuffer.begin(), numVertices * sizeof(ImDrawVert));
 
-        ImDrawIdx *indices = (ImDrawIdx *)tib.data;
-        bx::memCopy(indices, drawList->IdxBuffer.begin(), numIndices * sizeof(ImDrawIdx));
+                              ImDrawIdx *indices = (ImDrawIdx *)tib.data;
+                              bx::memCopy(indices, drawList->IdxBuffer.begin(), numIndices * sizeof(ImDrawIdx));
 
-        bgfx::Encoder *encoder = bgfx::begin();
+                              bgfx::Encoder *encoder = bgfx::begin();
 
-        for (const ImDrawCmd *cmd = drawList->CmdBuffer.begin(), *cmdEnd = drawList->CmdBuffer.end(); cmd != cmdEnd; ++cmd)
-        {
-            if (cmd->UserCallback)
-            {
-                cmd->UserCallback(drawList, cmd);
-            }
-            else if (0 != cmd->ElemCount)
-            {
-                uint64_t state = 0 | BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_MSAA;
+                              for (const ImDrawCmd *cmd = drawList->CmdBuffer.begin(), *cmdEnd = drawList->CmdBuffer.end(); cmd != cmdEnd; ++cmd)
+                              {
+                                  if (cmd->UserCallback)
+                                  {
+                                      cmd->UserCallback(drawList, cmd);
+                                  }
+                                  else if (0 != cmd->ElemCount)
+                                  {
+                                      uint64_t state = 0 | BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_MSAA;
 
-                bgfx::TextureHandle th = m_texture;
-                bgfx::ProgramHandle program = m_program;
+                                      bgfx::TextureHandle th = m_texture;
+                                      bgfx::ProgramHandle program = m_program;
 
-                if (NULL != cmd->TextureId)
-                {
-                    union
-                    {
-                        ImTextureID ptr;
-                        struct
-                        {
-                            bgfx::TextureHandle handle;
-                            uint8_t flags;
-                            uint8_t mip;
-                        } s;
-                    } texture = {cmd->TextureId};
-                    state |= 0 != (IMGUI_FLAGS_ALPHA_BLEND & texture.s.flags)
-                                 ? BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA)
-                                 : BGFX_STATE_NONE;
+                                      if (NULL != cmd->TextureId)
+                                      {
+                                          union
+                                          {
+                                              ImTextureID ptr;
+                                              struct
+                                              {
+                                                  bgfx::TextureHandle handle;
+                                                  uint8_t flags;
+                                                  uint8_t mip;
+                                              } s;
+                                          } texture = {cmd->TextureId};
+                                          state |= 0 != (IMGUI_FLAGS_ALPHA_BLEND & texture.s.flags)
+                                                       ? BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA)
+                                                       : BGFX_STATE_NONE;
 
-                    th = texture.s.handle;
-                    if (0 != texture.s.mip)
-                    {
-                        const float lodEnabled[4] = {float(texture.s.mip), 1.0f, 0.0f, 0.0f};
-                        bgfx::setUniform(u_imageLodEnabled, lodEnabled);
-                        program = m_imageProgram;
-                    }
-                }
-                else
-                {
-                    state |= BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA);
-                }
+                                          th = texture.s.handle;
+                                          if (0 != texture.s.mip)
+                                          {
+                                              const float lodEnabled[4] = {float(texture.s.mip), 1.0f, 0.0f, 0.0f};
+                                              bgfx::setUniform(u_imageLodEnabled, lodEnabled);
+                                              program = m_imageProgram;
+                                          }
+                                      }
+                                      else
+                                      {
+                                          state |= BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA);
+                                      }
 
-                // Project scissor/clipping rectangles into framebuffer space
-                ImVec4 clipRect;
-                clipRect.x = (cmd->ClipRect.x - clipPos.x) * clipScale.x;
-                clipRect.y = (cmd->ClipRect.y - clipPos.y) * clipScale.y;
-                clipRect.z = (cmd->ClipRect.z - clipPos.x) * clipScale.x;
-                clipRect.w = (cmd->ClipRect.w - clipPos.y) * clipScale.y;
+                                      // Project scissor/clipping rectangles into framebuffer space
+                                      ImVec4 clipRect;
+                                      clipRect.x = (cmd->ClipRect.x - clipPos.x) * clipScale.x;
+                                      clipRect.y = (cmd->ClipRect.y - clipPos.y) * clipScale.y;
+                                      clipRect.z = (cmd->ClipRect.z - clipPos.x) * clipScale.x;
+                                      clipRect.w = (cmd->ClipRect.w - clipPos.y) * clipScale.y;
 
-                if (clipRect.x < fb_width && clipRect.y < fb_height && clipRect.z >= 0.0f && clipRect.w >= 0.0f)
-                {
-                    const uint16_t xx = uint16_t(bx::max(clipRect.x, 0.0f));
-                    const uint16_t yy = uint16_t(bx::max(clipRect.y, 0.0f));
-                    encoder->setScissor(xx, yy, uint16_t(bx::min(clipRect.z, 65535.0f) - xx), uint16_t(bx::min(clipRect.w, 65535.0f) - yy));
+                                      if (clipRect.x < fb_width && clipRect.y < fb_height && clipRect.z >= 0.0f && clipRect.w >= 0.0f)
+                                      {
+                                          const uint16_t xx = uint16_t(bx::max(clipRect.x, 0.0f));
+                                          const uint16_t yy = uint16_t(bx::max(clipRect.y, 0.0f));
+                                          encoder->setScissor(xx, yy, uint16_t(bx::min(clipRect.z, 65535.0f) - xx), uint16_t(bx::min(clipRect.w, 65535.0f) - yy));
 
-                    encoder->setState(state);
-                    encoder->setTexture(0, s_tex, th);
-                    encoder->setVertexBuffer(0, &tvb, cmd->VtxOffset, numVertices);
-                    encoder->setIndexBuffer(&tib, cmd->IdxOffset, cmd->ElemCount);
-                    encoder->submit(m_viewId, program);
-                }
-            }
-        }
+                                          encoder->setState(state);
+                                          encoder->setTexture(0, s_tex, th);
+                                          encoder->setVertexBuffer(0, &tvb, cmd->VtxOffset, numVertices);
+                                          encoder->setIndexBuffer(&tib, cmd->IdxOffset, cmd->ElemCount);
+                                          encoder->submit(m_viewId, program);
+                                      }
+                                  }
+                              }
 
-        bgfx::end(encoder);
-    }
+                              bgfx::end(encoder);
+                          }
+                      });
 }
 
 IMGUI_IMPL_API void ImGui_ImplBabylon_Shutdown()
