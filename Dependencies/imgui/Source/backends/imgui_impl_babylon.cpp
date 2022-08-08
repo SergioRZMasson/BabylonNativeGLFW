@@ -148,11 +148,12 @@ IMGUI_IMPL_API void ImGui_ImplBabylon_RenderDrawData(ImDrawData *_drawData)
         return;
 
     arcana::make_task(s_context->AfterRenderScheduler(), arcana::cancellation_source::none(),
-                      [_drawData{_drawData}]()
+                      [_drawData{*_drawData}]()
                       {
                           // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-                          int fb_width = (int)(_drawData->DisplaySize.x * _drawData->FramebufferScale.x);
-                          int fb_height = (int)(_drawData->DisplaySize.y * _drawData->FramebufferScale.y);
+                          int fb_width = (int)(_drawData.DisplaySize.x * _drawData.FramebufferScale.x);
+                          int fb_height = (int)(_drawData.DisplaySize.y * _drawData.FramebufferScale.y);
+                          
                           if (fb_width <= 0 || fb_height <= 0)
                               return;
 
@@ -162,26 +163,26 @@ IMGUI_IMPL_API void ImGui_ImplBabylon_RenderDrawData(ImDrawData *_drawData)
                           const bgfx::Caps *caps = bgfx::getCaps();
                           {
                               float ortho[16];
-                              float x = _drawData->DisplayPos.x;
-                              float y = _drawData->DisplayPos.y;
-                              float width = _drawData->DisplaySize.x;
-                              float height = _drawData->DisplaySize.y;
+                              float x = _drawData.DisplayPos.x;
+                              float y = _drawData.DisplayPos.y;
+                              float width = _drawData.DisplaySize.x;
+                              float height = _drawData.DisplaySize.y;
 
                               bx::mtxOrtho(ortho, x, x + width, y + height, y, 0.0f, 1000.0f, 0.0f, caps->homogeneousDepth);
                               bgfx::setViewTransform(m_viewId, NULL, ortho);
                               bgfx::setViewRect(m_viewId, 0, 0, uint16_t(width), uint16_t(height));
                           }
 
-                          const ImVec2 clipPos = _drawData->DisplayPos;         // (0,0) unless using multi-viewports
-                          const ImVec2 clipScale = _drawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+                          const ImVec2 clipPos = _drawData.DisplayPos;         // (0,0) unless using multi-viewports
+                          const ImVec2 clipScale = _drawData.FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
                           // Render command lists
-                          for (int32_t ii = 0, num = _drawData->CmdListsCount; ii < num; ++ii)
+                          for (int32_t ii = 0, num = _drawData.CmdListsCount; ii < num; ++ii)
                           {
                               bgfx::TransientVertexBuffer tvb;
                               bgfx::TransientIndexBuffer tib;
 
-                              const ImDrawList *drawList = _drawData->CmdLists[ii];
+                              const ImDrawList *drawList = _drawData.CmdLists[ii];
                               uint32_t numVertices = (uint32_t)drawList->VtxBuffer.size();
                               uint32_t numIndices = (uint32_t)drawList->IdxBuffer.size();
 
