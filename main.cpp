@@ -190,20 +190,20 @@ static void window_resize_callback( GLFWwindow* window, int width, int height )
 	 device->UpdateSize( width, height );
 }
 
-static void change_ball_size(float size) 
+static void change_ball_size( float size )
 {
-	 runtime->Dispatch( [size](Napi::Env env) 
+	 runtime->Dispatch( [size]( Napi::Env env )
 	 {
-		  env.Global().Get( "ChangeBallSize" ).As<Napi::Function>().Call( {Napi::Value::From( env , size )} );
-	 });
+		  env.Global().Get( "ChangeBallSize" ).As<Napi::Function>().Call( { Napi::Value::From( env , size ) } );
+	 } );
 }
 
-static void change_ball_color( ImVec4 color) 
+static void change_ball_color( ImVec4 color )
 {
 	 runtime->Dispatch( [color]( Napi::Env env )
 	 {
-		  env.Global().Get( "ChangeBallColor" ).As<Napi::Function>().Call( 
-				{ 
+		  env.Global().Get( "ChangeBallColor" ).As<Napi::Function>().Call(
+				{
 					 Napi::Value::From( env , color.x ),
 					 Napi::Value::From( env , color.y ),
 					 Napi::Value::From( env , color.z ),
@@ -212,7 +212,7 @@ static void change_ball_color( ImVec4 color)
 	 } );
 }
 
-static void change_ball_visibility(bool visible) 
+static void change_ball_visibility( bool visible )
 {
 	 runtime->Dispatch( [visible]( Napi::Env env )
 	 {
@@ -223,7 +223,7 @@ static void change_ball_visibility(bool visible)
 	 } );
 }
 
-static void change_floor_visibility( bool visible ) 
+static void change_floor_visibility( bool visible )
 {
 	 runtime->Dispatch( [visible]( Napi::Env env )
 	 {
@@ -257,8 +257,8 @@ int main()
 	 IMGUI_CHECKVERSION();
 	 ImGui::CreateContext();
 	 ImGuiIO& io = ImGui::GetIO(); ( void ) io;
-	 io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-	 io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+	 io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+	 io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
 
 	 ImGui::StyleColorsDark();
 
@@ -291,44 +291,41 @@ int main()
 		  {
 				ImGui::NewFrame();
 
-				// 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+				static float ballSize = 1.0f;
+
+				ImGui::Begin( "Scene Editor Example" );
+
+				ImGui::Text( "Use this controllers to change values in the Babylon scene." );
+
+				if( ImGui::Checkbox( "Show ball", &show_ball ) )
 				{
-					 static float ballSize = 0.0f;
-
-					 ImGui::Begin( "Hello, world!" );                          // Create a window called "Hello, world!" and append into it.
-
-					 ImGui::Text( "This is some useful text." );
-
-					 if( ImGui::Checkbox( "Show ball", &show_ball ) )     
-					 {
-						  change_ball_visibility( show_ball );
-					 }
-						  
-					 if( ImGui::Checkbox( "Show floor", &show_floor ) )
-					 {
-						  change_floor_visibility( show_floor );
-					 }
-
-					 if( ImGui::SliderFloat( "Ball Size", &ballSize, 1.0f, 10.0f ) )               // Edit 1 float using a slider from 0.0f to 1.0f
-					 {
-						  change_ball_size( ballSize );
-					 }
-					 
-					 if( ImGui::ColorEdit3( "Ball Color", ( float* ) &ballColor ) ) // Edit 3 floats representing a color
-					 {
-						  change_ball_color( ballColor );
-					 }
-
-					 if( ImGui::Button("Resume") )
-					 {
-						  s_showImgui = false;
-					 }
-
-					 ImGui::SameLine();
-
-					 ImGui::Text( "Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate );
-					 ImGui::End();
+					 change_ball_visibility( show_ball );
 				}
+
+				if( ImGui::Checkbox( "Show floor", &show_floor ) )
+				{
+					 change_floor_visibility( show_floor );
+				}
+
+				if( ImGui::SliderFloat( "Ball Size", &ballSize, 1.0f, 10.0f ) )
+				{
+					 change_ball_size( ballSize );
+				}
+
+				if( ImGui::ColorEdit3( "Ball Color", ( float* ) &ballColor ) )
+				{
+					 change_ball_color( ballColor );
+				}
+
+				if( ImGui::Button( "Resume" ) )
+				{
+					 s_showImgui = false;
+				}
+
+				ImGui::SameLine();
+
+				ImGui::Text( "Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate );
+				ImGui::End();
 
 				ImGui::Render();
 				ImGui_ImplBabylon_RenderDrawData( ImGui::GetDrawData() );
