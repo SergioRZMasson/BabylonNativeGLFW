@@ -24,6 +24,7 @@ light.intensity = 0.7;
 
 // Our built-in 'sphere' shape.
 var sphere = BABYLON.MeshBuilder.CreateSphere("sphere", { diameter: 2, segments: 32 }, scene);
+sphere.material = new BABYLON.StandardMaterial("myMaterial", scene);
 
 // Move the sphere upward 1/2 its height
 sphere.position.y = 1;
@@ -34,5 +35,25 @@ var ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 6, height: 6 },
 function MoveUp()
 {
     sphere.position.y += 0.05;
+}
+
+function ChangeBallSize(size)
+{
+    sphere.scaling = new BABYLON.Vector3(size, size, size);
+}
+
+function ChangeBallColor(r, g, b, a)
+{
+    sphere.material.diffuseColor = new BABYLON.Color3(r, g, b);
+}
+
+function SetBallVisible(visible)
+{
+    sphere.isVisible = visible;
+}
+
+function SetFloorVisible(visible)
+{
+    ground.isVisible = visible;
 }
 

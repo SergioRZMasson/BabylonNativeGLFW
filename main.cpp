@@ -36,231 +36,312 @@
 #endif //
 #include <GLFW/glfw3native.h>
 
-std::unique_ptr<Babylon::AppRuntime> runtime{};
-std::unique_ptr<Babylon::Graphics::Device> device{};
-std::unique_ptr<Babylon::Graphics::DeviceUpdate> update{};
-Babylon::Plugins::NativeInput* nativeInput{};
-std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
+std::unique_ptr<Babylon::AppRuntime> runtime {};
+std::unique_ptr<Babylon::Graphics::Device> device {};
+std::unique_ptr<Babylon::Graphics::DeviceUpdate> update {};
+Babylon::Plugins::NativeInput* nativeInput {};
+std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas {};
 bool minimized = false;
 
 #define INITIAL_WIDTH 1920
 #define INITIAL_HEIGHT 1080
 
-static void* glfwNativeWindowHandle(GLFWwindow* _window)
+static bool s_showImgui = false;
+
+static void* glfwNativeWindowHandle( GLFWwindow* _window )
 {
 #if TARGET_PLATFORM_LINUX
-		return (void*)(uintptr_t)glfwGetX11Window(_window);
+	 return ( void* ) ( uintptr_t ) glfwGetX11Window( _window );
 #elif TARGET_PLATFORM_OSX
-		return ((NSWindow*)glfwGetCocoaWindow(_window)).contentView;
+	 return ( ( NSWindow* ) glfwGetCocoaWindow( _window ) ).contentView;
 #elif TARGET_PLATFORM_WINDOWS
-		return glfwGetWin32Window(_window);
+	 return glfwGetWin32Window( _window );
 #endif // TARGET_PLATFORM_
 }
 
 void Uninitialize()
 {
-	if (device)
-	{
-		update->Finish();
-		device->FinishRenderingCurrentFrame();
-	}
+	 if( device )
+	 {
+		  update->Finish();
+		  device->FinishRenderingCurrentFrame();
+		  ImGui_ImplBabylon_Shutdown();
+	 }
 
-	nativeInput = {};
-	runtime.reset();
-	nativeCanvas.reset();
-	update.reset();
-	device.reset();
+	 nativeInput = {};
+	 runtime.reset();
+	 nativeCanvas.reset();
+	 update.reset();
+	 device.reset();
 }
 
-void RefreshBabylon(GLFWwindow* window)
+void RefreshBabylon( GLFWwindow* window )
 {
-	Uninitialize();
+	 Uninitialize();
 
-	int width, height;
-	glfwGetWindowSize(window, &width, &height);
+	 int width, height;
+	 glfwGetWindowSize( window, &width, &height );
 
-	Babylon::Graphics::WindowConfiguration graphicsConfig{};
-	graphicsConfig.Window = (Babylon::Graphics::WindowType)glfwNativeWindowHandle(window);
-	graphicsConfig.Width = width;
-	graphicsConfig.Height = height;
-	graphicsConfig.MSAASamples = 4;
+	 Babylon::Graphics::WindowConfiguration graphicsConfig {};
+	 graphicsConfig.Window = ( Babylon::Graphics::WindowType ) glfwNativeWindowHandle( window );
+	 graphicsConfig.Width = width;
+	 graphicsConfig.Height = height;
+	 graphicsConfig.MSAASamples = 4;
 
-	device = Babylon::Graphics::Device::Create(graphicsConfig);
-	update = std::make_unique<Babylon::Graphics::DeviceUpdate>(device->GetUpdate("update"));
-	device->StartRenderingCurrentFrame();
-	update->Start();
+	 device = Babylon::Graphics::Device::Create( graphicsConfig );
+	 update = std::make_unique<Babylon::Graphics::DeviceUpdate>( device->GetUpdate( "update" ) );
+	 device->StartRenderingCurrentFrame();
+	 update->Start();
 
-	runtime = std::make_unique<Babylon::AppRuntime>();
+	 runtime = std::make_unique<Babylon::AppRuntime>();
 
-	runtime->Dispatch([](Napi::Env env)
-		{
-			device->AddToJavaScript(env);
+	 runtime->Dispatch( []( Napi::Env env )
+	 {
+		  device->AddToJavaScript( env );
 
-			Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+		  Babylon::Polyfills::Console::Initialize( env, []( const char* message, auto ) {
 				std::cout << message << std::endl;
-			});
+		  } );
 
-			Babylon::Polyfills::Window::Initialize(env);
+		  Babylon::Polyfills::Window::Initialize( env );
 
-			Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-			nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
+		  Babylon::Polyfills::XMLHttpRequest::Initialize( env );
+		  nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>( Babylon::Polyfills::Canvas::Initialize( env ) );
 
-			Babylon::Plugins::NativeEngine::Initialize(env);
+		  Babylon::Plugins::NativeEngine::Initialize( env );
 
-			Babylon::Plugins::NativeOptimizations::Initialize(env);
+		  Babylon::Plugins::NativeOptimizations::Initialize( env );
 
-			nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
-			auto context = &Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
+		  nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript( env );
+		  auto context = &Babylon::Graphics::DeviceContext::GetFromJavaScript( env );
 
-			ImGui_ImplBabylon_SetContext(context);
-		});
+		  ImGui_ImplBabylon_SetContext( context );
+	 } );
 
-	Babylon::ScriptLoader loader{ *runtime };
-	loader.Eval("document = {}", "");
-	loader.LoadScript("app:///Scripts/ammo.js");
-	// Commenting out recast.js for now because v8jsi is incompatible with asm.js.
-	// loader.LoadScript("app:///Scripts/recast.js");
-	loader.LoadScript("app:///Scripts/babylon.max.js");
-	loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
-	loader.LoadScript("app:///Scripts/babylonjs.materials.js");
-	loader.LoadScript("app:///Scripts/babylon.gui.js");
-	loader.LoadScript("app:///Scripts/meshwriter.min.js");
-	loader.LoadScript("app:///Scripts/game.js");
+	 Babylon::ScriptLoader loader { *runtime };
+	 loader.Eval( "document = {}", "" );
+	 loader.LoadScript( "app:///Scripts/ammo.js" );
+	 // Commenting out recast.js for now because v8jsi is incompatible with asm.js.
+	 // loader.LoadScript("app:///Scripts/recast.js");
+	 loader.LoadScript( "app:///Scripts/babylon.max.js" );
+	 loader.LoadScript( "app:///Scripts/babylonjs.loaders.js" );
+	 loader.LoadScript( "app:///Scripts/babylonjs.materials.js" );
+	 loader.LoadScript( "app:///Scripts/babylon.gui.js" );
+	 loader.LoadScript( "app:///Scripts/meshwriter.min.js" );
+	 loader.LoadScript( "app:///Scripts/game.js" );
+
+	 ImGui_ImplBabylon_Init();
 }
 
-static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+static void key_callback( GLFWwindow* window, int key, int scancode, int action, int mods )
 {
-	if (key == GLFW_KEY_R && action == GLFW_PRESS) {
-		RefreshBabylon(window);
-	}
+	 if( key == GLFW_KEY_R && action == GLFW_PRESS )
+	 {
+		  RefreshBabylon( window );
+	 }
+	 else if( key == GLFW_KEY_D && action == GLFW_PRESS )
+	 {
+		  s_showImgui = !s_showImgui;
+	 }
 }
 
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+void mouse_button_callback( GLFWwindow* window, int button, int action, int mods )
 {
-	double xpos, ypos;
-	glfwGetCursorPos(window, &xpos, &ypos);
-	int32_t x = static_cast<int32_t>(xpos);
-	int32_t y = static_cast<int32_t>(ypos);
+	 if( s_showImgui )
+		  return;
 
-	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
-		nativeInput->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
-	else if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE)
-		nativeInput->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
-	else if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS)
-		nativeInput->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
-	else if (button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE)
-		nativeInput->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
-	else if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS)
-		nativeInput->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
-	else if (button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_RELEASE)
-		nativeInput->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
+	 double xpos, ypos;
+	 glfwGetCursorPos( window, &xpos, &ypos );
+	 int32_t x = static_cast< int32_t >( xpos );
+	 int32_t y = static_cast< int32_t >( ypos );
+
+	 if( button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS )
+		  nativeInput->MouseDown( Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y );
+	 else if( button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_RELEASE )
+		  nativeInput->MouseUp( Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y );
+	 else if( button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS )
+		  nativeInput->MouseDown( Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y );
+	 else if( button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_RELEASE )
+		  nativeInput->MouseUp( Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y );
+	 else if( button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_PRESS )
+		  nativeInput->MouseDown( Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y );
+	 else if( button == GLFW_MOUSE_BUTTON_MIDDLE && action == GLFW_RELEASE )
+		  nativeInput->MouseUp( Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y );
 }
 
-static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
+static void cursor_position_callback( GLFWwindow* window, double xpos, double ypos )
 {
-	int32_t x = static_cast<int32_t>(xpos);
-	int32_t y = static_cast<int32_t>(ypos);
+	 int32_t x = static_cast< int32_t >( xpos );
+	 int32_t y = static_cast< int32_t >( ypos );
 
-	nativeInput->MouseMove(x, y);
+	 nativeInput->MouseMove( x, y );
 }
 
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+void scroll_callback( GLFWwindow* window, double xoffset, double yoffset )
 {
-	nativeInput->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, static_cast<int>(-yoffset * 100.0));
+	 if( s_showImgui )
+		  return;
+
+	 nativeInput->MouseWheel( Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, static_cast< int >( -yoffset * 100.0 ) );
 }
 
-static void window_resize_callback(GLFWwindow* window, int width, int height)
+static void window_resize_callback( GLFWwindow* window, int width, int height )
 {
-	device->UpdateSize(width, height);
+	 device->UpdateSize( width, height );
+}
+
+static void change_ball_size(float size) 
+{
+	 runtime->Dispatch( [size](Napi::Env env) 
+	 {
+		  env.Global().Get( "ChangeBallSize" ).As<Napi::Function>().Call( {Napi::Value::From( env , size )} );
+	 });
+}
+
+static void change_ball_color( ImVec4 color) 
+{
+	 runtime->Dispatch( [color]( Napi::Env env )
+	 {
+		  env.Global().Get( "ChangeBallColor" ).As<Napi::Function>().Call( 
+				{ 
+					 Napi::Value::From( env , color.x ),
+					 Napi::Value::From( env , color.y ),
+					 Napi::Value::From( env , color.z ),
+					 Napi::Value::From( env , color.w )
+				} );
+	 } );
+}
+
+static void change_ball_visibility(bool visible) 
+{
+	 runtime->Dispatch( [visible]( Napi::Env env )
+	 {
+		  env.Global().Get( "SetBallVisible" ).As<Napi::Function>().Call(
+				{
+					 Napi::Value::From( env , visible )
+				} );
+	 } );
+}
+
+static void change_floor_visibility( bool visible ) 
+{
+	 runtime->Dispatch( [visible]( Napi::Env env )
+	 {
+		  env.Global().Get( "SetFloorVisible" ).As<Napi::Function>().Call(
+				{
+					 Napi::Value::From( env , visible )
+				} );
+	 } );
 }
 
 int main()
 {
-	if (!glfwInit())
-		exit(EXIT_FAILURE);
+	 if( !glfwInit() )
+		  exit( EXIT_FAILURE );
 
-	auto window = glfwCreateWindow(INITIAL_WIDTH, INITIAL_HEIGHT, "Simple example", NULL, NULL);
+	 auto window = glfwCreateWindow( INITIAL_WIDTH, INITIAL_HEIGHT, "Simple example", NULL, NULL );
 
-	if (!window)
-	{
-		glfwTerminate();
-		exit(EXIT_FAILURE);
-	}
+	 if( !window )
+	 {
+		  glfwTerminate();
+		  exit( EXIT_FAILURE );
+	 }
 
-	glfwSetKeyCallback(window, key_callback);
-	glfwSetWindowSizeCallback(window, window_resize_callback);
-	glfwSetCursorPosCallback(window, cursor_position_callback);
-	glfwSetMouseButtonCallback(window, mouse_button_callback);
-	glfwSetScrollCallback(window, scroll_callback);
+	 glfwSetKeyCallback( window, key_callback );
+	 glfwSetWindowSizeCallback( window, window_resize_callback );
+	 glfwSetCursorPosCallback( window, cursor_position_callback );
+	 glfwSetMouseButtonCallback( window, mouse_button_callback );
+	 glfwSetScrollCallback( window, scroll_callback );
 
-	// Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+	 // Setup Dear ImGui context
+	 IMGUI_CHECKVERSION();
+	 ImGui::CreateContext();
+	 ImGuiIO& io = ImGui::GetIO(); ( void ) io;
+	 io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+	 io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
-    ImGui::StyleColorsDark();
+	 ImGui::StyleColorsDark();
 
-    // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOther(window, true);
-	
-	// Our state
-    bool show_demo_window = true;
-    bool show_another_window = false;
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-    
-	RefreshBabylon(window);
-	ImGui_ImplBabylon_Init();
+	 // Setup Platform/Renderer backends
+	 ImGui_ImplGlfw_InitForOther( window, true );
 
-	while (!glfwWindowShouldClose(window))
-	{
-		if (device)
-		{
-			update->Finish();
-			device->FinishRenderingCurrentFrame();
-			device->StartRenderingCurrentFrame();
-			update->Start();
-		}
-		glfwPollEvents();
+	 // Our state
+	 bool show_ball = true;
+	 bool show_floor = true;
+	 ImVec4 ballColor = ImVec4( 0.55f, 0.55f, 0.55f, 1.00f );
 
-		// Start the Dear ImGui frame
-        ImGui_ImplBabylon_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
+	 RefreshBabylon( window );
 
-        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-        ImGui::ShowDemoWindow(&show_demo_window);
+	 while( !glfwWindowShouldClose( window ) )
+	 {
+		  if( device )
+		  {
+				update->Finish();
+				device->FinishRenderingCurrentFrame();
+				device->StartRenderingCurrentFrame();
+				update->Start();
+		  }
+		  glfwPollEvents();
 
-		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
-        {
-            static float f = 0.0f;
-            static int counter = 0;
+		  // Start the Dear ImGui frame
+		  ImGui_ImplBabylon_NewFrame();
+		  ImGui_ImplGlfw_NewFrame();
 
-            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+		  if( s_showImgui )
+		  {
+				ImGui::NewFrame();
 
-            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-            ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-            ImGui::Checkbox("Another Window", &show_another_window);
+				// 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+				{
+					 static float ballSize = 0.0f;
 
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+					 ImGui::Begin( "Hello, world!" );                          // Create a window called "Hello, world!" and append into it.
 
-            if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-                counter++;
-            ImGui::SameLine();
-            ImGui::Text("counter = %d", counter);
+					 ImGui::Text( "This is some useful text." );
 
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-            ImGui::End();
-        }
+					 if( ImGui::Checkbox( "Show ball", &show_ball ) )     
+					 {
+						  change_ball_visibility( show_ball );
+					 }
+						  
+					 if( ImGui::Checkbox( "Show floor", &show_floor ) )
+					 {
+						  change_floor_visibility( show_floor );
+					 }
 
-		ImGui::Render();
-		ImGui_ImplBabylon_RenderDrawData(ImGui::GetDrawData());
-	}
+					 if( ImGui::SliderFloat( "Ball Size", &ballSize, 1.0f, 10.0f ) )               // Edit 1 float using a slider from 0.0f to 1.0f
+					 {
+						  change_ball_size( ballSize );
+					 }
+					 
+					 if( ImGui::ColorEdit3( "Ball Color", ( float* ) &ballColor ) ) // Edit 3 floats representing a color
+					 {
+						  change_ball_color( ballColor );
+					 }
 
-	Uninitialize();
-	glfwDestroyWindow(window);
-	glfwTerminate();
-	exit(EXIT_SUCCESS);
+					 if( ImGui::Button("Resume") )
+					 {
+						  s_showImgui = false;
+					 }
+
+					 ImGui::SameLine();
+
+					 ImGui::Text( "Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate );
+					 ImGui::End();
+				}
+
+				ImGui::Render();
+				ImGui_ImplBabylon_RenderDrawData( ImGui::GetDrawData() );
+		  }
+	 }
+
+	 Uninitialize();
+
+	 // Cleanup
+	 ImGui_ImplGlfw_Shutdown();
+	 ImGui::DestroyContext();
+
+	 glfwDestroyWindow( window );
+	 glfwTerminate();
+	 exit( EXIT_SUCCESS );
 }
