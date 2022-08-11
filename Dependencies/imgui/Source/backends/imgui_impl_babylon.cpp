@@ -78,7 +78,7 @@ bool ImGui_ImplBabylon_Init()
 
     ImGuiIO &io = ImGui::GetIO();
 
-    io.DisplaySize = ImVec2(1280.0f, 720.0f);
+    io.DisplaySize = ImVec2(1920.0f, 1080.0f);
     io.DeltaTime = 1.0f / 60.0f;
     io.IniFilename = NULL;
 
@@ -138,11 +138,11 @@ void ImGui_ImplBabylon_SetContext(Babylon::Graphics::DeviceContext *context)
     s_context = context;
 }
 
-IMGUI_IMPL_API void ImGui_ImplBabylon_NewFrame()
+void ImGui_ImplBabylon_NewFrame()
 {
 }
 
-IMGUI_IMPL_API void ImGui_ImplBabylon_RenderDrawData(ImDrawData *_drawData)
+void ImGui_ImplBabylon_RenderDrawData(ImDrawData *_drawData)
 {
     if (s_context == nullptr)
         return;
@@ -245,11 +245,7 @@ IMGUI_IMPL_API void ImGui_ImplBabylon_RenderDrawData(ImDrawData *_drawData)
                                           state |= BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA);
                                       }
 
-                                      ImVec4 clipRect;
-                                      clipRect.x = cmd->ClipRect.x;
-                                      clipRect.y = cmd->ClipRect.y;
-                                      clipRect.z = cmd->ClipRect.z;
-                                      clipRect.w = cmd->ClipRect.w;
+                                      ImVec4 clipRect = cmd->ClipRect;
 
                                       if (clipRect.x < fb_width && clipRect.y < fb_height && clipRect.z >= 0.0f && clipRect.w >= 0.0f)
                                       {
@@ -271,7 +267,7 @@ IMGUI_IMPL_API void ImGui_ImplBabylon_RenderDrawData(ImDrawData *_drawData)
                       });
 }
 
-IMGUI_IMPL_API void ImGui_ImplBabylon_Shutdown()
+void ImGui_ImplBabylon_Shutdown()
 {
     bgfx::destroy(s_tex);
     bgfx::destroy(m_texture);
