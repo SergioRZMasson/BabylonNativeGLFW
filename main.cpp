@@ -126,7 +126,7 @@ void RefreshBabylon(GLFWwindow *window)
 	loader.LoadScript("app:///Scripts/meshwriter.min.js");
 	loader.LoadScript("app:///Scripts/game.js");
 
-	ImGui_ImplBabylon_Init();
+	ImGui_ImplBabylon_Init( width , height );
 }
 
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods)

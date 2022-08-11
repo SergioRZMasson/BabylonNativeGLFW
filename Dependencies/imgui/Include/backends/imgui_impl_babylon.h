@@ -16,7 +16,7 @@
 #include "imgui.h"      // IMGUI_IMPL_API
 #include <Babylon/Graphics/DeviceContext.h>
 
-IMGUI_IMPL_API bool ImGui_ImplBabylon_Init();
+IMGUI_IMPL_API bool ImGui_ImplBabylon_Init(uint32_t width, uint32_t height, float fontSize = 16.0f);
 IMGUI_IMPL_API void ImGui_ImplBabylon_SetContext(Babylon::Graphics::DeviceContext* context);
 IMGUI_IMPL_API void ImGui_ImplBabylon_Shutdown();
 IMGUI_IMPL_API void ImGui_ImplBabylon_NewFrame();

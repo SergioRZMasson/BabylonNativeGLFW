@@ -68,9 +68,9 @@ inline bool checkAvailTransientBuffers(uint32_t _numVertices, const bgfx::Vertex
 static bx::DefaultAllocator allocator;
 static Babylon::Graphics::DeviceContext *s_context = nullptr;
 
-bool ImGui_ImplBabylon_Init()
+bool ImGui_ImplBabylon_Init(uint32_t display_width, uint32_t display_height, float fontSize)
 {
-    float _fontSize = 16;
+    float _fontSize = fontSize;
 
     bx::AllocatorI *_allocator = &allocator;
     m_allocator = _allocator;
@@ -78,7 +78,7 @@ bool ImGui_ImplBabylon_Init()
 
     ImGuiIO &io = ImGui::GetIO();
 
-    io.DisplaySize = ImVec2(1920.0f, 1080.0f);
+    io.DisplaySize = ImVec2(static_cast<float>( display_width ), static_cast<float>( display_height ));
     io.DeltaTime = 1.0f / 60.0f;
     io.IniFilename = NULL;
 
