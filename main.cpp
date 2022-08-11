@@ -93,26 +93,26 @@ void RefreshBabylon(GLFWwindow *window)
 	runtime = std::make_unique<Babylon::AppRuntime>();
 
 	runtime->Dispatch([](Napi::Env env)
-					  {
-		  device->AddToJavaScript( env );
+	{
+		device->AddToJavaScript( env );
 
-		  Babylon::Polyfills::Console::Initialize( env, []( const char* message, auto ) {
-				std::cout << message << std::endl;
-		  } );
+		Babylon::Polyfills::Console::Initialize( env, []( const char* message, auto ) {
+			std::cout << message << std::endl;
+		} );
 
-		  Babylon::Polyfills::Window::Initialize( env );
+		Babylon::Polyfills::Window::Initialize( env );
+		Babylon::Polyfills::XMLHttpRequest::Initialize( env );
 
-		  Babylon::Polyfills::XMLHttpRequest::Initialize( env );
-		  nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>( Babylon::Polyfills::Canvas::Initialize( env ) );
+		nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>( Babylon::Polyfills::Canvas::Initialize( env ) );
 
-		  Babylon::Plugins::NativeEngine::Initialize( env );
+		Babylon::Plugins::NativeEngine::Initialize( env );
+		Babylon::Plugins::NativeOptimizations::Initialize( env );
 
-		  Babylon::Plugins::NativeOptimizations::Initialize( env );
+		nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript( env );
+		auto context = &Babylon::Graphics::DeviceContext::GetFromJavaScript( env );
 
-		  nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript( env );
-		  auto context = &Babylon::Graphics::DeviceContext::GetFromJavaScript( env );
-
-		  ImGui_ImplBabylon_SetContext( context ); });
+		ImGui_ImplBabylon_SetContext( context ); 
+	});
 
 	Babylon::ScriptLoader loader{*runtime};
 	loader.Eval("document = {}", "");
@@ -189,25 +189,33 @@ static void window_resize_callback(GLFWwindow *window, int width, int height)
 static void change_ball_size(float size)
 {
 	runtime->Dispatch([size](Napi::Env env)
-					  { env.Global().Get("ChangeBallSize").As<Napi::Function>().Call({Napi::Value::From(env, size)}); });
+	{ 
+		env.Global().Get("ChangeBallSize").As<Napi::Function>().Call({Napi::Value::From(env, size)}); 
+	});
 }
 
 static void change_ball_color(ImVec4 color)
 {
 	runtime->Dispatch([color](Napi::Env env)
-					  { env.Global().Get("ChangeBallColor").As<Napi::Function>().Call({Napi::Value::From(env, color.x), Napi::Value::From(env, color.y), Napi::Value::From(env, color.z), Napi::Value::From(env, color.w)}); });
+	{ 
+		env.Global().Get("ChangeBallColor").As<Napi::Function>().Call({Napi::Value::From(env, color.x), Napi::Value::From(env, color.y), Napi::Value::From(env, color.z), Napi::Value::From(env, color.w)}); 
+	});
 }
 
 static void change_ball_visibility(bool visible)
 {
 	runtime->Dispatch([visible](Napi::Env env)
-					  { env.Global().Get("SetBallVisible").As<Napi::Function>().Call({Napi::Value::From(env, visible)}); });
+	{ 
+		env.Global().Get("SetBallVisible").As<Napi::Function>().Call({Napi::Value::From(env, visible)}); 
+	});
 }
 
 static void change_floor_visibility(bool visible)
 {
 	runtime->Dispatch([visible](Napi::Env env)
-					  { env.Global().Get("SetFloorVisible").As<Napi::Function>().Call({Napi::Value::From(env, visible)}); });
+	{ 
+		env.Global().Get("SetFloorVisible").As<Napi::Function>().Call({Napi::Value::From(env, visible)}); 
+	});
 }
 
 int main()
